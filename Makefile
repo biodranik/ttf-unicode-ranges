@@ -6,7 +6,7 @@ FREETYPE_LIB_DIR=/opt/X11/lib
 
 C=gcc
 CPP=g++
-CFLAGS=-Wall -W -O3 -I${FREETYPE_INCLUDE_DIR}
+CFLAGS=-Wall -W -O0 -g -I${FREETYPE_INCLUDE_DIR}
 CPPFLAGS=-std=c++11 ${CFLAGS}
 LDFLAGS=-L${FREETYPE_LIB_DIR} -lfreetype
 SRC=$(wildcard *.cc)
