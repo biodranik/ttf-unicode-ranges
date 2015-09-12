@@ -48,6 +48,33 @@ struct UnicodeRange {
   string name_;
 };
 
+void PrintRanges(const vector<UnicodeRange> & ranges, vector<FT_ULong> charcodes) {
+  if (charcodes.empty()) {
+    return;
+  }
+  // Display font ranges.
+  for (const auto & range : ranges) {
+    size_t count = 0;
+    for (auto it = charcodes.begin(); it != charcodes.end();) {
+      if (*it >= range.first_ && *it <= range.last_) {
+        ++count;
+        it = charcodes.erase(it);
+      } else {
+        ++it;
+      }
+    }
+    if (count) {
+      const bool stress = (double)count / (range.last_ - range.first_ + 1) >= 0.5;
+      if (stress) cout << "\033[0;36m";
+      cout << range.name_ << ' ' << count << '/' << range.last_ - range.first_ + 1 << endl;
+      if (stress) cout << "\033[0m";
+    }
+  }
+  if (!charcodes.empty()) {
+    cout << "Number of characters from unspecified range: " << charcodes.size() << endl;
+  }
+}
+
 int main(int argc, char ** argv) {
   if (argc < 2) {
     cout << "Usage: " << argv[0] << " <ttf font file> [full path to Blocks.txt]" << endl;
@@ -88,46 +115,53 @@ int main(int argc, char ** argv) {
     return error;
   }
   const ScopeGuard lib_guard([&library]() { FT_Done_FreeType(library); });
-  FT_Face face;
-  // TODO(AlexZ): Process all faces from file, not only 0, by using face->num_faces.
-  error = FT_New_Face(library, argv[1], 0, &face);
-  if (error) {
-    cout << "Error " << error << " while opening ttf file " << argv[1] << '.' << endl;
-    return error;
-  }
-  const ScopeGuard face_guard([&face]() { FT_Done_Face(face); });
-  // TODO(AlexZ): Also get charmap info.
-  vector<FT_ULong> charcodes;
-  {
-    charcodes.reserve(face->num_glyphs);
-    FT_UInt glyph_index;
-    FT_ULong charcode = FT_Get_First_Char(face, &glyph_index);
-    while (glyph_index != 0) {
-      charcodes.push_back(charcode);
-      charcode = FT_Get_Next_Char(face, charcode, &glyph_index);
-    }
-    sort(charcodes.begin(), charcodes.end());
-    charcodes.erase(unique(charcodes.begin(), charcodes.end()), charcodes.end());
-  }
 
-  // Display font information.
-  cout << "Font " << argv[1] << endl;
-  // Display font ranges.
-  auto char_iterator = charcodes.begin();
-  for (const auto & range : ranges) {
-    size_t count = 0;
-    while (*char_iterator >= range.first_ && *char_iterator <= range.last_) {
-      ++count;
-      if (++char_iterator == charcodes.end()) {
-        break;
+  cout << "File " << argv[1] << endl;
+  // Font file (e.g. ttc) can contain more than one face. Process them all!
+  int num_faces = 1;
+  for (int i = 0; i < num_faces; ++i) {
+    FT_Face face;
+    error = FT_New_Face(library, argv[1], i, &face);
+    if (error) {
+      cout << "Error " << error << " while opening ttf file " << argv[1] << '.' << endl;
+      return error;
+    }
+    const ScopeGuard face_guard([&face]() { FT_Done_Face(face); });
+
+    num_faces = face->num_faces;
+    cout << string(80, '*') << endl;
+    cout << "Face index: " << face->face_index << endl;
+    string style;
+    if (face->style_flags & FT_STYLE_FLAG_BOLD) {
+      style += "Bold ";
+    }
+    if (face->style_flags & FT_STYLE_FLAG_ITALIC) {
+      style += "Italic ";
+    }
+    if (!style.empty()) {
+      cout << "Style: " << style << endl;
+    }
+    if (face->family_name) {
+      cout << "Family name: " << face->family_name << endl;
+    }
+    if (face->style_name) {
+      cout << "Style name: " << face->style_name << endl;
+    }
+    // TODO(AlexZ): Also get charmap info.
+    vector<FT_ULong> charcodes;
+    {
+      charcodes.reserve(face->num_glyphs);
+      FT_UInt glyph_index;
+      FT_ULong charcode = FT_Get_First_Char(face, &glyph_index);
+      while (glyph_index != 0) {
+        charcodes.push_back(charcode);
+        charcode = FT_Get_Next_Char(face, charcode, &glyph_index);
       }
+      sort(charcodes.begin(), charcodes.end());
+      charcodes.erase(unique(charcodes.begin(), charcodes.end()), charcodes.end());
     }
-    if (count) {
-      cout << range.name_ << ' ' << count << '/' << range.last_ - range.first_ + 1 << endl;
-    }
-    if (char_iterator == charcodes.end()) {
-      break;
-    }
+    PrintRanges(ranges, charcodes);
   }
+  cout << endl;
   return 0;
 }
