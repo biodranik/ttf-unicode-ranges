@@ -1,8 +1,15 @@
 .PHONY: all indent clean
 
-# This one is for Mac OS X Yosemite
-FREETYPE_INCLUDE_DIR=/opt/X11/include/freetype2
-FREETYPE_LIB_DIR=/opt/X11/lib
+UNAME := $(shell uname)
+ifeq ($(UNAME), Darwin)
+    # This one is for Mac OS X Yosemite
+    FREETYPE_INCLUDE_DIR=/opt/X11/include/freetype2
+    FREETYPE_LIB_DIR=/opt/X11/lib
+endif
+ifeq ($(UNAME), Linux)
+    FREETYPE_INCLUDE_DIR=/usr/include/freetype2
+    FREETYPE_LIB_DIR=/usr/lib
+endif
 
 C=gcc
 CPP=g++
