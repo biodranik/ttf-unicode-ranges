@@ -1,21 +1,17 @@
 .PHONY: all indent clean
 
-UNAME := $(shell uname)
-ifeq ($(UNAME), Darwin)
-    # This one is for Mac OS X Yosemite
-    FREETYPE_INCLUDE_DIR=/opt/X11/include/freetype2
-    FREETYPE_LIB_DIR=/opt/X11/lib
-endif
-ifeq ($(UNAME), Linux)
-    FREETYPE_INCLUDE_DIR=/usr/include/freetype2
-    FREETYPE_LIB_DIR=/usr/lib
+# Default value for Linux-like systems.
+FREETYPE_PREFIX=/usr
+BREW_FREETYPE=$(shell brew --prefix freetype2 2>/dev/null)
+ifneq ($(BREW_FREETYPE),)
+	FREETYPE_PREFIX := ${BREW_FREETYPE}
 endif
 
 C=gcc
 CPP=g++
-CFLAGS=-Wall -W -O0 -g -I${FREETYPE_INCLUDE_DIR}
+CFLAGS=-Wall -W -O3 -I${FREETYPE_PREFIX}/include/freetype2
 CPPFLAGS=-std=c++11 ${CFLAGS}
-LDFLAGS=-L${FREETYPE_LIB_DIR} -lfreetype
+LDFLAGS=-L${FREETYPE_PREFIX}/lib -lfreetype
 SRC=$(wildcard *.cc)
 BIN=$(SRC:%.cc=build/%)
 
@@ -35,4 +31,3 @@ build:
 
 build/%: %.cc
 	${CPP} ${CPPFLAGS} -o $@ $< ${LDFLAGS}
-
