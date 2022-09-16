@@ -24,6 +24,8 @@
 
 // Prints character ranges from text file, with a char code on each line.
 
+#include <string.h>
+
 #include <algorithm>
 #include <fstream>
 #include <functional>
